@@ -1,23 +1,13 @@
-use std::process::Command;
-use std::io::Result;
+use std::time::SystemTime;
+use std::process::{Command,Stdio};
+use std::io::{Error, ErrorKind, Result};
 use chrono::{DateTime,Utc};
 use serde::{Serialize, Deserialize};
+use serde_json::Value;
+use std::fmt::{Display,Formatter};
+use std::collections::HashMap;
 
-pub struct TaskWarrior {
-}
-
-impl TaskWarrior {
-  pub fn run(self) -> Result<Vec<Task>> {
-      Command::new("task")
-          .arg("export")
-          .output()
-          .map(|out| {
-            serde_json::from_slice(&out.stdout).unwrap()
-          })
-  }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Task {
     pub id: u16,
     pub description: String,
@@ -27,39 +17,135 @@ pub struct Task {
     pub project: Option<String>,
 
     #[serde(default, with = "opt_export_datetime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    start: Option<DateTime<Utc>>,
+    #[serde(default, with = "opt_export_datetime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     due: Option<DateTime<Utc>>,
     #[serde(default, with = "opt_export_datetime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     end: Option<DateTime<Utc>>,
     #[serde(with = "export_datetime")]
     entry: DateTime<Utc>,
     #[serde(with = "export_datetime")]
     modified: DateTime<Utc>,
     #[serde(default, with = "opt_export_datetime")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     until: Option<DateTime<Utc>>,
 
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     mask: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     imask: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     parent: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     recur: Option<String>,
     #[serde(default)]
     tags: Vec<String>,
     uuid: String,
     pub urgency: f64,
+
+    #[serde(flatten)]
+    extra: HashMap<String, Value>
 }
 
-#[derive(Serialize,Deserialize,Debug)]
+impl Task {
+  pub fn all_tasks() -> Result<Vec<Task>> {
+    Command::new("task")
+      .arg("export")
+      .output()
+      .map(|out| {
+        serde_json::from_slice(&out.stdout).unwrap()
+      })
+  }
+
+  pub fn from_id(id: u16) -> Result<Task> {
+    Command::new("task")
+      .arg("export")
+      .arg(id.to_string())
+      .output()
+      .map(|out| {
+        let mut list: Vec<Task> = serde_json::from_slice(&out.stdout).unwrap();
+        list.remove(0)
+      })
+  }
+
+  pub fn create(name: String) -> Result<()> {
+    Command::new("task")
+      .arg("add")
+      .arg(name)
+      .status()
+      .map(|_| ())
+  }
+
+  pub fn start(&self) -> Result<()> {
+    let started = Task{start: Some(SystemTime::now().into()), .. self.clone()};
+    started.update()
+  }
+
+  pub fn stop(&self) -> Result<()> {
+    let stopped = Task{start: None, .. self.clone()};
+    stopped.update()
+  }
+
+  pub fn done(&self) -> Result<()> {
+    let done = Task{status: Status::Completed, .. self.clone()};
+    done.update()
+  }
+
+  fn update(&self) -> Result<()> {
+    let mut import = Command::new("task")
+      .arg("import")
+      .stdin(Stdio::piped())
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped())
+      .env_remove("TASKRC")
+      .spawn()?;
+
+    let stdin = import.stdin.as_mut().ok_or_else(|| Error::new(ErrorKind::BrokenPipe, ""))?;
+    serde_json::to_writer(stdin, &self).map_err(|se| Error::new(ErrorKind::InvalidData, se))?;
+    import.wait().map(|_| ())
+  }
+
+  pub fn edit(&self) -> Result<()> {
+    Command::new("rofi-sensible-terminal")
+      .arg("-e")
+      .arg("task")
+      .arg("edit")
+      .arg(self.id.to_string())
+      .stdin(Stdio::null())
+      .stdout(Stdio::null())
+      .stderr(Stdio::null())
+      .spawn()
+      .map(|_| ())
+  }
+}
+
+#[derive(Serialize,Deserialize,Debug,Copy,Clone)]
 #[serde(tag = "status", rename_all="lowercase")]
 pub enum Status {
     Pending,
     Waiting,
-    Started,
     Deleted,
     Completed,
     Recurring,
+}
+
+impl Display for Status {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", match self {
+      Status::Pending => "p",
+      Status::Waiting => "w",
+      Status::Deleted => "X",
+      Status::Completed => "C",
+      Status::Recurring => "r",
+    })
+  }
 }
 
 mod opt_export_datetime {
