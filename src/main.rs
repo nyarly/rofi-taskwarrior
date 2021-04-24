@@ -14,12 +14,9 @@ fn main() -> Result<()> {
   let invo = Invocation::env();
 
   let (mut table, rofi) = if let Some(rofi) = invo {
-    (Table::new("{:>} {:>}⎜{:<}\0info\x1f{:<}")
-      .with_row(row!("", "OUTSIDE", rofi.outside.clone(), ""))
-      .with_row(row!("", "INFO", rofi.info.clone().unwrap_or_else(||"<none>".to_string()), "")),
-      rofi)
+    (Table::new("{:>}⎜{:<}\0info\x1f{:<}"), rofi)
   } else {
-    return all_tasks(&mut Table::new("{:>} {:>}  {:<}  {:<}"))
+    return all_tasks(&mut Table::new("{:>}  {:<}  {:<}"))
   };
 
   match rofi.how {
@@ -46,7 +43,7 @@ fn all_tasks(table: &mut Table) -> Result<()> {
       let mut tasks: Vec<_> = all_tasks.iter().filter(|t| matches!(t.status, Status::Pending)).collect();
       tasks.sort_unstable_by(|l, r| l.urgency.partial_cmp(&r.urgency).unwrap_or(Ordering::Less).reverse());
       for task in tasks {
-          table.add_row(row!(task.status, task.project.as_ref().unwrap_or(&String::from(" ")), task.description.clone(), chooser(task)));
+          table.add_row(row!(task.project.as_ref().unwrap_or(&String::from(" ")), task.description.clone(), chooser(task)));
       };
       print!("{}", table);
   })
