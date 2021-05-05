@@ -50,8 +50,19 @@ pub struct Task {
     uuid: String,
     pub urgency: f64,
 
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub annotations: Vec<Annotation>,
+
     #[serde(flatten)]
     extra: HashMap<String, Value>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Annotation {
+    #[serde(with = "export_datetime")]
+    entry: DateTime<Utc>,
+    description: String
 }
 
 impl Task {
