@@ -1,6 +1,6 @@
 [package]
 name = "rofi-taskwarrior"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Judson Lester <nyarly@gmail.com>"]
 edition = "2018"
 description = "A rofi script modi for taskwarrior"

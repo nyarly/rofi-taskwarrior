@@ -2,40 +2,33 @@ mod taskwarrior;
 mod rofi;
 
 use taskwarrior::{Status, Task};
-use rofi::{Invocation,Retv};
+use rofi::{Invocation,Retv,info_string};
 use std::io::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
 use tabular::{row,Table};
-use base64::{decode,encode};
 use serde::{Serialize, Deserialize};
-use rmp_serde::{from_read,to_vec};
 
 fn main() -> Result<()> {
   let invo = Invocation::env();
 
-  let (mut table, rofi) = if let Some(rofi) = invo {
-    (Table::new("{:>}⎜{:<}\0info\x1f{:<}"), rofi)
+  let (mut table, rofi) = if let Ok(rofi) = invo {
+    (Table::new("{:>}⎜{:<}\0{:<}"), rofi)
   } else {
     return all_tasks(&mut Table::new("{:>}  {:<}  {:<}"))
   };
 
   match rofi.how {
     Retv::Initial => all_tasks(&mut table),
-    Retv::Entry(_) => act_on_task(rofi.info.clone().unwrap()),
+    Retv::Entry(_) => act_on_task(rofi.info.unwrap()),
     Retv::Custom(name) => add_task(name),
-    Retv::Key(_) => {warn_no_key(&mut table); all_tasks(&mut table)},
+    Retv::Key(kb) => match kb.key {
+      0 => Task::from_id(rofi.info.expect("no task selected").task_id()?)?.start(),
+      1 => Task::from_id(rofi.info.expect("no task selected").task_id()?)?.stop(),
+      2 => Task::from_id(rofi.info.expect("no task selected").task_id()?)?.done(),
+      3 => Task::from_id(rofi.info.expect("no task selected").task_id()?)?.edit(),
+      _ => {warn_no_key(&mut table); all_tasks(&mut table)}
+    }
   }
-}
-
-fn enc(info: Info) -> String {
-  encode(to_vec(&info).unwrap())
-}
-
-fn dec(msg: String) -> Result<Info> {
-  from_read::<&[u8],_>(
-    (decode(msg).map_err(|e| Error::new(ErrorKind::InvalidData, e)))?
-    .as_ref()
-  ).map_err(|e| Error::new(ErrorKind::InvalidData, e))
 }
 
 fn all_tasks(table: &mut Table) -> Result<()> {
@@ -50,11 +43,10 @@ fn all_tasks(table: &mut Table) -> Result<()> {
 }
 
 fn chooser(task: &Task) -> String {
-  enc(Info::Choose(task.id))
+  info_string(Info::Choose(task.id))
 }
 
-fn act_on_task(msg: String) -> Result<()> {
-  let info = dec(msg)?;
+fn act_on_task(info: Info) -> Result<()> {
   use Info::*;
   match info {
     Choose(id) => {options_list(id); Ok(())},
@@ -84,11 +76,25 @@ pub enum Info {
   Create(String),
 }
 
+impl Info {
+  fn task_id(&self) -> Result<u16> {
+    use Info::*;
+    match self {
+      Choose(id) |
+      Start(id) |
+      Stop(id) |
+      Done(id) |
+      Edit(id) => Ok(*id),
+      Create(_) => Err(Error::new(ErrorKind::InvalidInput, "can't create and use shortcut"))
+    }
+  }
+}
+
 fn options_list(id: u16) {
   let mut table = Table::new("{:>} {:<}\0info\x1f{:<}");
-  table.add_row(row!("Alt-1", "Start", enc(Info::Start(id))));
-  table.add_row(row!("Alt-2", "Stop", enc(Info::Stop(id))));
-  table.add_row(row!("Alt-3", "Done", enc(Info::Done(id))));
-  table.add_row(row!("Alt-4", "Edit", enc(Info::Edit(id))));
+  table.add_row(row!("Alt-1", "Start", info_string(Info::Start(id))));
+  table.add_row(row!("Alt-2", "Stop", info_string(Info::Stop(id))));
+  table.add_row(row!("Alt-3", "Done", info_string(Info::Done(id))));
+  table.add_row(row!("Alt-4", "Edit", info_string(Info::Edit(id))));
   println!("{}", table);
 }
