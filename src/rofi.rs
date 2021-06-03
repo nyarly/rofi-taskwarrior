@@ -3,13 +3,18 @@ use base64::{decode,encode};
 use rmp_serde::{from_read,to_vec};
 use serde::{Serialize, Deserialize};
 use std::io::{Error, ErrorKind, Result};
+use std::fmt::Debug;
+use log::{debug,info,trace};
+use tap::prelude::*;
 
-pub struct Invocation<I: Deserialize<'static>> {
+#[derive(Debug)]
+pub struct Invocation<I: Deserialize<'static> + Debug> {
   pub outside: String,
   pub info: Option<I>,
   pub how: Retv,
 }
 
+#[derive(Debug)]
 pub enum Retv {
   Initial,
   Entry(String),
@@ -17,12 +22,13 @@ pub enum Retv {
   Key(Keybinding)
 }
 
+#[derive(Debug)]
 pub struct Keybinding {
   pub key: u8,
   pub entry: Option<String>,
 }
 
-impl<I: for<'de> Deserialize<'de>> Invocation<I> {
+impl<I: for<'de> Deserialize<'de> + Debug> Invocation<I> {
   pub fn env() -> Result<Self> {
     let outside = match env::var("ROFI_OUTSIDE") {
       Ok(v) => v,
@@ -47,22 +53,29 @@ impl<I: for<'de> Deserialize<'de>> Invocation<I> {
       _ => return Err(Error::new(ErrorKind::InvalidData, "invalid ROFI_RETV"))
     };
 
-
-    Ok(Invocation{outside, info, how})
+    Ok(
+        Invocation{outside, info, how}
+        .tap(|invoke| info!("Invocation: {:?}", invoke))
+    )
   }
 }
 
-pub fn info_string<I: Serialize>(info: I) -> String {
+pub fn info_string<I: Serialize + Debug>(info: I) -> String {
   format!("info\x1f{}", enc(info))
 }
 
-fn enc<I: Serialize>(info: I) -> String {
-  encode(to_vec(&info).unwrap())
+fn enc<I: Serialize + Debug>(info: I) -> String {
+  encode(to_vec(
+          &info.tap(|e| trace!("encoded info: {:?}", e))
+  ).unwrap())
 }
 
-fn dec<I: for<'de> Deserialize<'de>>(msg: String) -> Result<I> {
+fn dec<I: for<'de> Deserialize<'de> + Debug>(msg: String) -> Result<I> {
   from_read::<&[u8],_>(
-    (decode(msg).map_err(|e| Error::new(ErrorKind::InvalidData, e)))?
+    (decode(
+            msg.tap(|m| debug!("decoding: {:?}", m))
+    ).map_err(|e| Error::new(ErrorKind::InvalidData, e)))?
     .as_ref()
-  ).map_err(|e| Error::new(ErrorKind::InvalidData, e))
+  ).tap(|e| debug!("decoded info: {:?}", e))
+      .map_err(|e| Error::new(ErrorKind::InvalidData, e))
 }

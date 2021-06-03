@@ -7,13 +7,25 @@ use std::io::{Error, ErrorKind, Result};
 use std::cmp::Ordering;
 use tabular::{row,Table};
 use serde::{Serialize, Deserialize};
+use std::fs::OpenOptions;
+use simplelog::{WriteLogger,LevelFilter};
+use log::warn;
 
 fn main() -> Result<()> {
+  let logfile = OpenOptions::new()
+      .append(true)
+      .create(true)
+      .open("test.log")
+      .unwrap();
+  let cfg = simplelog::Config::default();
+  let _ = WriteLogger::init(LevelFilter::Debug, cfg, logfile);
+
   let invo = Invocation::env();
 
   let (mut table, rofi) = if let Ok(rofi) = invo {
     (Table::new("{:>}⎜{:<}\0{:<}"), rofi)
   } else {
+    warn!("err: {:?}", invo);
     return all_tasks(&mut Table::new("{:>}  {:<}  {:<}"))
   };
 
@@ -36,14 +48,14 @@ fn all_tasks(table: &mut Table) -> Result<()> {
       let mut tasks: Vec<_> = all_tasks.iter().filter(|t| matches!(t.status, Status::Pending)).collect();
       tasks.sort_unstable_by(|l, r| l.urgency.partial_cmp(&r.urgency).unwrap_or(Ordering::Less).reverse());
       for task in tasks {
-          table.add_row(row!(task.project.as_ref().unwrap_or(&String::from(" ")), task.description.clone(), chooser(task)));
+          table.add_row(row!(
+                  task.project.as_ref().unwrap_or(&String::from(" ")),
+                  task.description.clone(),
+                  info_string(Info::Choose(task.id))
+          ));
       };
       print!("{}", table);
   })
-}
-
-fn chooser(task: &Task) -> String {
-  info_string(Info::Choose(task.id))
 }
 
 fn act_on_task(info: Info) -> Result<()> {
@@ -59,7 +71,7 @@ fn act_on_task(info: Info) -> Result<()> {
 }
 
 fn add_task(name: String) -> Result<()> {
-    Task::create(name)
+  Task::create(name)
 }
 
 fn warn_no_key(table: &mut Table) {
@@ -91,7 +103,7 @@ impl Info {
 }
 
 fn options_list(id: u16) {
-  let mut table = Table::new("{:>} {:<}\0info\x1f{:<}");
+  let mut table = Table::new("{:>} {:<}\0{:<}");
   table.add_row(row!("Alt-1", "Start", info_string(Info::Start(id))));
   table.add_row(row!("Alt-2", "Stop", info_string(Info::Stop(id))));
   table.add_row(row!("Alt-3", "Done", info_string(Info::Done(id))));
