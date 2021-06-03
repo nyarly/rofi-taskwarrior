@@ -9,16 +9,28 @@ use tabular::{row,Table};
 use serde::{Serialize, Deserialize};
 use std::fs::OpenOptions;
 use simplelog::{WriteLogger,LevelFilter};
+use core::str::FromStr;
 use log::warn;
+use std::env;
 
 fn main() -> Result<()> {
-  let logfile = OpenOptions::new()
-      .append(true)
+  if let Ok(logpath) = env::var("RTW_LOG") {
+    let append = match env::var("ROFI_RETV") {
+      Ok(r) if r == "0" => matches!(env::var("RTW_KEEPLOG"), Ok(_)),
+      _ => true
+    };
+    let logfile = OpenOptions::new()
       .create(true)
-      .open("test.log")
+      .append(append)
+      .open(logpath)
       .unwrap();
-  let cfg = simplelog::Config::default();
-  let _ = WriteLogger::init(LevelFilter::Debug, cfg, logfile);
+    let cfg = simplelog::Config::default();
+    let level = match env::var("RTW_LOGLEVEL") {
+      Ok(l) => LevelFilter::from_str(&l).unwrap_or(LevelFilter::Info),
+      Err(_) => LevelFilter::Info
+    };
+    let _ = WriteLogger::init(level, cfg, logfile);
+  }
 
   let invo = Invocation::env();
 
