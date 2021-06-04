@@ -77,7 +77,6 @@ Reach out if that would be useful to you.
 
 ## License
 
-For the time being, `rofi-taskwarrior` is licensed under the
-LicenseZero Parity license.
-When the L0 successor opens up,
-I'll consider next steps regarding licensing.
+`rofi-taskwarrior` is licensed under the
+Indie Code Catalog [Free License](https://indiecc.com/free/2.0.0),
+with commercial use [available for purchase.](https://indiecc.com/~nyarly/rofi-taskwarrior)
