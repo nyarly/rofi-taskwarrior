@@ -15,15 +15,22 @@ use std::env;
 
 fn main() -> Result<()> {
   if let Ok(logpath) = env::var("RTW_LOG") {
-    let append = match env::var("ROFI_RETV") {
+    let logfile = if match env::var("ROFI_RETV") {
       Ok(r) if r == "0" => matches!(env::var("RTW_KEEPLOG"), Ok(_)),
       _ => true
+    } {
+      OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(logpath)
+        .unwrap()
+    } else {
+      OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(logpath)
+        .unwrap()
     };
-    let logfile = OpenOptions::new()
-      .create(true)
-      .append(append)
-      .open(logpath)
-      .unwrap();
     let cfg = simplelog::Config::default();
     let level = match env::var("RTW_LOGLEVEL") {
       Ok(l) => LevelFilter::from_str(&l).unwrap_or(LevelFilter::Info),
