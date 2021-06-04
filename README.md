@@ -36,8 +36,8 @@ which makes it quick to record new tasks.
 
 For this initial release,
 the "Alt-1" indications in the task menus
-is merely aspirational.
-I've got a todo to implement them.
+will work,
+provided you haven't customized them in Rofi.
 
 ### Daily use
 
@@ -49,6 +49,11 @@ to be launched at a keystroke.
 How you do that depends on you window manager;
 my advice will come from Xmonad,
 but PRs with example configuration are welcome.
+
+If you are using Xmonad, you can add something like
+```haskell
+((modm, xK_r), spawn "env TERMINAL=alacritty EDITOR=nvim rofi -modi tasks:rofi-taskwarrior -show tasks &"),
+```
 
 ### Terminal
 
@@ -71,8 +76,9 @@ There's a few little features I still have in mind,
 but I'm sure other ideas will surface with usage.
 
 It might be handy
-to spin off the Taskwarrior module
-as its own crate.
+to spin off
+the Taskwarrior or Rofi modules
+as their own crates.
 Reach out if that would be useful to you.
 
 ## License
