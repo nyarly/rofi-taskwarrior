@@ -77,8 +77,8 @@ impl Task {
 
   pub fn from_id(id: u16) -> Result<Task> {
     Command::new("task")
-      .arg("export")
       .arg(id.to_string())
+      .arg("export")
       .output()
       .map(|out| {
         let mut list: Vec<Task> = serde_json::from_slice(&out.stdout).unwrap();
