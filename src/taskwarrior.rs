@@ -71,7 +71,7 @@ impl Task {
       .arg("export")
       .output()
       .map(|out| {
-        serde_json::from_slice(&out.stdout).unwrap()
+        serde_json::from_slice(String::from_utf8_lossy(&out.stdout).as_bytes()).unwrap()
       })
   }
 
@@ -81,7 +81,7 @@ impl Task {
       .arg("export")
       .output()
       .map(|out| {
-        let mut list: Vec<Task> = serde_json::from_slice(&out.stdout).unwrap();
+        let mut list: Vec<Task> = serde_json::from_slice(String::from_utf8_lossy(&out.stdout).as_bytes()).unwrap();
         list.remove(0)
       })
   }
