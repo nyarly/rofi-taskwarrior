@@ -92,6 +92,10 @@ impl Task {
             .map(|_| ())
     }
 
+    pub fn is_started(&self) -> bool {
+        self.start.is_some() && self.end.is_none()
+    }
+
     pub fn start(&self) -> Result<()> {
         let started = Task {
             start: Some(SystemTime::now().into()),

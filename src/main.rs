@@ -70,7 +70,18 @@ fn all_tasks(table: &mut Table) -> Result<()> {
         let mut tasks: Vec<_> = all_tasks
             .iter()
             .filter(|t| matches!(t.status, Status::Pending))
+            .cloned()
+            .map(|mut t| {
+                if t.is_started() {
+                    let mut s = String::from("* ");
+                    s.push_str(&t.description);
+                    s.push_str(" *");
+                    t.description = s;
+                }
+                t
+            })
             .collect();
+
         tasks.sort_unstable_by(|l, r| {
             l.urgency
                 .partial_cmp(&r.urgency)
