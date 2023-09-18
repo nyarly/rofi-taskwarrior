@@ -16,7 +16,7 @@ use taskwarrior::{Status, Task};
 fn main() -> Result<()> {
     if let Ok(logpath) = env::var("RTW_LOG") {
         let logfile = if match env::var("ROFI_RETV") {
-            Ok(r) if r == "0" => matches!(env::var("RTW_KEEPLOG"), Ok(_)),
+            Ok(r) if r == "0" => env::var("RTW_KEEPL").is_ok(),
             _ => true,
         } {
             OpenOptions::new()
