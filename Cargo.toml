@@ -1,6 +1,6 @@
 [package]
 name = "rofi-taskwarrior"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Judson Lester <nyarly@gmail.com>"]
 edition = "2018"
 description = "A rofi script modi for taskwarrior"
@@ -9,7 +9,7 @@ repository = "https://github.com/nyarly/rofi-taskwarrior"
 license-file = "LICENSE.md"
 
 [dependencies]
-chrono = { version = "^0.4.0", features = ["serde"] }
+chrono = { version = "^0.4.20", features = ["serde"] }
 serde = { version = "^1.0.0", features = ["derive"] }
 serde_json = "^1.0.0"
 rmp-serde = "^0.15.4"

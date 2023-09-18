@@ -201,7 +201,9 @@ mod opt_export_datetime {
 }
 
 mod export_datetime {
-    use chrono::{DateTime, TimeZone, Utc};
+
+    use chrono::{DateTime, NaiveDateTime, Utc};
+
     use serde::{self, Deserialize, Deserializer, Serializer};
 
     const FORMAT: &str = "%Y%m%dT%H%M%SZ";
@@ -233,7 +235,9 @@ mod export_datetime {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Utc.datetime_from_str(&s, FORMAT)
+
+        NaiveDateTime::parse_from_str(&s, FORMAT)
+            .map(|d| d.and_utc())
             .map_err(serde::de::Error::custom)
     }
 }
