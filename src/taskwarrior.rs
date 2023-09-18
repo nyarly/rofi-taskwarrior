@@ -13,7 +13,7 @@ pub struct Task {
     pub description: String,
     #[serde(flatten)]
     pub status: Status,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<String>,
 
     #[serde(default, with = "opt_export_datetime")]
