@@ -46,7 +46,7 @@ pub struct Task {
     #[serde(skip_serializing_if = "Option::is_none")]
     recur: Option<String>,
     #[serde(default)]
-    tags: Vec<String>,
+    pub tags: Vec<String>,
     uuid: String,
     pub urgency: f64,
 

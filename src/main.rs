@@ -70,16 +70,6 @@ fn all_tasks(table: &mut Table) -> Result<()> {
         let mut tasks: Vec<_> = all_tasks
             .iter()
             .filter(|t| matches!(t.status, Status::Pending))
-            .cloned()
-            .map(|mut t| {
-                if t.is_started() {
-                    let mut s = String::from("* ");
-                    s.push_str(&t.description);
-                    s.push_str(" *");
-                    t.description = s;
-                }
-                t
-            })
             .collect();
 
         tasks.sort_unstable_by(|l, r| {
@@ -88,13 +78,25 @@ fn all_tasks(table: &mut Table) -> Result<()> {
                 .unwrap_or(Ordering::Less)
                 .reverse()
         });
+
         for task in tasks {
+            let mut task_name = task.description.clone();
+
+            if task.is_started() {
+                task_name.insert_str(0, "[*] ");
+            }
+
+            if !task.tags.is_empty() {
+                task_name.push_str(&format!(" [{}]", task.tags.join(", ")));
+            }
+
             table.add_row(row!(
                 task.project.as_ref().unwrap_or(&String::from(" ")),
-                task.description.clone(),
+                task_name,
                 info_string(Info::Choose(task.id))
             ));
         }
+
         print!("{}", table);
     })
 }
